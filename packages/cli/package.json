@@ -1,0 +1,21 @@
+{
+  "name": "sigil-cli",
+  "version": "1.0.0",
+  "description": "SIGIL CLI",
+  "main": "dist/index.js",
+  "bin": {
+    "sigil": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup index.ts --format esm,cjs"
+  },
+  "dependencies": {
+    "@sigil/core": "workspace:*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
