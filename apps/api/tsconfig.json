@@ -1,17 +1,9 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "baseUrl": ".",
-    "paths": {
-      "@sigil/core": ["../../packages/core/src"]
-    },
-    "outDir": "dist",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true
+    "rootDir": "src",
+    "outDir": "dist"
   },
-  "include": ["**/*.ts"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

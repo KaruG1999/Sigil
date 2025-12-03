@@ -23,7 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// index.ts
+// src/index.ts
 var import_commander = require("commander");
 var import_core = require("@sigil/core");
 var import_fs = __toESM(require("fs"));

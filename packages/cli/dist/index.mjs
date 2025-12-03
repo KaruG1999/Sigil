@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// index.ts
+// src/index.ts
 import { Command } from "commander";
 import { scanRepository } from "@sigil/core";
 import fs from "fs";
