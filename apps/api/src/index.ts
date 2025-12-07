@@ -6,21 +6,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post("/scan", async (req, res) => {
+app.get("/scan", async (req, res) => {
   try {
-    const { repo } = req.body;
-    if (!repo) return res.status(400).json({ error: "Missing repo URL" });
+    const repo = req.query.repo as string;
+
+    if (!repo) {
+      return res.status(400).json({ error: "Missing ?repo=" });
+    }
 
     const result = await scanRepository(repo);
 
-    return res.json(result);
-  } catch (err) {
-    return res.status(500).json({
-      error: err instanceof Error ? err.message : "Unknown error"
-    });
+    res.json(result);
+  } catch (error) {
+    console.error("Scan error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-app.listen(4000, () => {
-  console.log("🔮 SIGIL API running on http://localhost:4000");
+app.listen(3002, () => {
+  console.log("API listening on port 3002");
 });

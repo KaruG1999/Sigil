@@ -9,22 +9,20 @@ const core_1 = require("@sigil/core");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.post("/scan", async (req, res) => {
-    const { repo } = req.body || {};
-    if (!repo || typeof repo !== "string") {
-        return res.status(400).json({ status: "error", message: "Missing 'repo' in request body" });
-    }
+app.get("/scan", async (req, res) => {
     try {
-        const { score, findings } = await (0, core_1.scanRepository)(repo);
-        return res.json({ status: "success", score, findings });
+        const repo = req.query.repo;
+        if (!repo) {
+            return res.status(400).json({ error: "Missing ?repo=" });
+        }
+        const result = await (0, core_1.scanRepository)(repo);
+        res.json(result);
     }
-    catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return res.status(500).json({ status: "error", message });
+    catch (error) {
+        console.error("Scan error:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
-const port = process.env.PORT ? Number(process.env.PORT) : 4000;
-app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`SIGIL API running on http://localhost:${port}`);
+app.listen(3002, () => {
+    console.log("API listening on port 3002");
 });
