@@ -1,13 +1,5 @@
 // packages/core/src/types.ts
-export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+// MVP types: keep names and shape exactly as requested
+export interface ScanFinding { type: string; message: string; }
 
-export interface Finding {
-  type: string;
-  message: string;
-}
-
-export interface ScanOutput {
-  riskLevel: RiskLevel;
-  summary: string;
-  findings: Finding[];
-}
+export interface ScanResult { score: number; findings: ScanFinding[]; }
