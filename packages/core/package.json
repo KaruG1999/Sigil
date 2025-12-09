@@ -6,7 +6,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
+  "dependencies": {
+    "adm-zip": "^0.5.10"
+  },
   "devDependencies": {
+    "@types/adm-zip": "^0.4.4",
     "@types/node": "^20.19.25",
     "typescript": "^5.9.3"
   }
