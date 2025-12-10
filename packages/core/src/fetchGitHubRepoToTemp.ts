@@ -18,17 +18,33 @@ function buildZipUrl(repoUrl: string): string {
 }
 
 /**
- * Descargar un archivo usando HTTPS sin dependencias raras.
+ * Descargar un archivo usando HTTPS con soporte para redirects (302/301).
  */
-function download(url: string, dest: string): Promise<void> {
+function download(url: string, dest: string, maxRedirects = 5): Promise<void> {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
+    if (maxRedirects <= 0) {
+      return reject(new Error("Too many redirects"));
+    }
+
     https.get(url, (res) => {
+      // Handle redirects (GitHub uses 302 for archive downloads)
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        const redirectUrl = res.headers.location;
+        if (!redirectUrl) {
+          return reject(new Error("Redirect without location header"));
+        }
+        // Follow the redirect
+        return download(redirectUrl, dest, maxRedirects - 1).then(resolve).catch(reject);
+      }
+
       if (res.statusCode !== 200) {
         return reject(new Error(`Failed to download ZIP: ${res.statusCode}`));
       }
+
+      const file = fs.createWriteStream(dest);
       res.pipe(file);
       file.on("finish", () => file.close(() => resolve()));
+      file.on("error", reject);
     }).on("error", reject);
   });
 }
