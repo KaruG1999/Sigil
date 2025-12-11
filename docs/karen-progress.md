@@ -1,6 +1,6 @@
 # Karen's Progress - VibeSafe Frontend
 
-## Date: 2024-12-11
+## Date: 2025-12-11
 
 ## Summary
 
@@ -271,13 +271,16 @@ pnpm turbo build
 
 ## Pending Tasks
 
-### Task 5: Styles and Polish
-- [ ] Loading spinner improvements
-- [ ] Fade-in animations
-- [ ] Theme color adjustments
-- [ ] Responsive design improvements
-- [ ] Hover effects on buttons
-- [ ] Gradients in header
+### Task 5: Styles and Polish - COMPLETED ✅
+- [x] Loading spinner improvements (pulse-glow animation)
+- [x] Fade-in animations (fade-in-up for cards)
+- [x] Theme color adjustments (SIGIL brand colors)
+- [x] Responsive design improvements
+- [x] Hover effects on buttons (btn-glow class)
+- [x] Gradients in header
+- [x] Glass card effects
+- [x] Custom scrollbar styling
+- [x] Risk level badge gradients
 
 ---
 
@@ -438,7 +441,265 @@ por si se terminan los tokens antes de finalizar la tarea
 
 ## Collaboration Notes
 
-- Anouk completed backend (API + Core) on 2024-12-10
-- Karen completing frontend integration on 2024-12-11
+- Anouk completed backend (API + Core) on 2025-12-10
+- Karen completing frontend integration on 2025-12-11
 - Git workflow: Feature branches merged to main
 - Current branch: `feat/front-settings`
+
+---
+
+# Session 2: 2025-12-11 (Continued)
+
+## Task 5: Styles and Polish - Implementation Details
+
+### globals.css Enhancements
+
+Added comprehensive SIGIL Design System:
+
+```css
+/* SIGIL Brand Colors */
+--color-sigil-purple: #A57CFF;
+--color-sigil-purple-dark: #7c3aed;
+--color-sigil-cyan: #4FFFEF;
+--color-sigil-dark: #0A0A0F;
+--color-sigil-card: #12121A;
+--color-sigil-card-hover: #1a1a24;
+```
+
+### Custom Animations Added
+
+1. **fade-in-up** - Cards and content fade in with upward motion
+2. **fade-in** - Simple opacity transition
+3. **pulse-glow** - Pulsing purple glow effect for loading states
+4. **shimmer** - Loading skeleton effect
+5. **float** - Gentle floating animation
+6. **scan-line** - Security scanner visual effect
+
+### Utility Classes Created
+
+```css
+.animate-fade-in-up    /* 0.5s ease-out */
+.animate-fade-in       /* 0.4s ease-out */
+.animate-pulse-glow    /* 2s infinite */
+.animate-shimmer       /* 2s infinite */
+.animate-float         /* 3s infinite */
+.stagger-1 through .stagger-5  /* Animation delays */
+```
+
+### Component Styles
+
+1. **Glass Card Effect**
+   ```css
+   .glass-card {
+     background: rgba(18, 18, 26, 0.8);
+     backdrop-filter: blur(12px);
+     border: 1px solid rgba(255, 255, 255, 0.1);
+   }
+   ```
+
+2. **Glow Button**
+   ```css
+   .btn-glow:hover {
+     box-shadow: 0 0 30px rgba(165, 124, 255, 0.4);
+     transform: translateY(-2px);
+   }
+   ```
+
+3. **Risk Level Badges**
+   ```css
+   .risk-critical /* Red gradient with glow */
+   .risk-high     /* Orange-red gradient */
+   .risk-medium   /* Yellow gradient */
+   .risk-low      /* Green gradient */
+   ```
+
+4. **Custom Scrollbar** - Purple themed
+5. **Selection Color** - Purple highlight
+6. **Focus Visible** - Accessibility purple outline
+
+### scan/page.tsx Updates
+
+- Applied `glass-card` class to result cards
+- Added `btn-glow` to scan button
+- Enhanced loading spinner with `animate-pulse-glow`
+- Added shimmer effect during analysis
+- Applied `animate-fade-in-up` to result sections
+- Added staggered animations to findings list
+
+---
+
+## Etherscan API Key Issue - Resolved
+
+### Problem
+When testing USDT contract scan (`0xdAC17F958D2ee523a2206206994597C13D831ec7`), received error:
+```
+"Analysis failed: Failed to fetch contract: Error: NOTOK"
+```
+
+### Root Cause
+The initial ETHERSCAN_API_KEY in `.env` was invalid/expired.
+
+### Solution
+1. Created new account at https://etherscan.io/myapikey
+2. Generated new API key
+3. Updated `.env` file with valid key
+4. Restarted API server with fresh environment variables
+
+### Commands Used to Debug
+```bash
+# Check if key exists
+cat .env | grep ETHERSCAN
+
+# Test API key directly
+curl -s "https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address=0xdAC17F958D2ee523a2206206994597C13D831ec7&apikey=YOUR_KEY"
+
+# Kill existing API process
+lsof -ti:4000 | xargs kill -9
+
+# Start API with env vars loaded
+set -a && . ./.env && set +a && cd apps/api && pnpm ts-node src/index.ts
+```
+
+---
+
+## Successful Test Results
+
+### USDT Contract Scan (TetherToken)
+
+**Contract:** `0xdAC17F958D2ee523a2206206994597C13D831ec7`
+
+| Field | Value |
+|-------|-------|
+| Risk Level | CRITICAL |
+| Risk Score | 100/100 |
+| Contract Name | TetherToken |
+| Compiler | v0.4.18+commit.9cf6e910 |
+| Verified | Yes |
+
+### Findings (11 total)
+
+**CRITICAL (3):**
+1. Centralized Control Risk - Owner has excessive privileges (issue, destroyBlackFunds, pause, deprecate)
+2. Unlimited Token Minting - issue() function without caps
+3. Arbitrary Contract Upgrade - deprecate() allows redirect to any contract
+
+**HIGH (3):**
+1. Blacklist Mechanism - Can freeze user funds
+2. Pausable Transfers - Can trap holder funds
+3. Access Control Weakness - Single owner, no multisig
+
+**MEDIUM (4):**
+1. Hidden Owner - Complex ownership patterns
+2. Hidden Transfer Fee - Fee logic in transfer
+3. Hidden Fee Modification - setParams() can modify fees
+4. Outdated Solidity Version - Uses 0.4.17
+
+**LOW (1):**
+1. Approve Front-Running - Standard approve vulnerability
+
+---
+
+## Additional Prompts from Session 2
+
+### Prompt 5: Commit Request
+```
+si, quiero hacer el commit y el push a mi rama actual con los progresos antes de continuar con la tarea 5
+```
+
+### Prompt 6: Shorter Commit Message Request
+```
+descriptivo pero mas corto
+```
+
+### Prompt 7: Task 5 Instructions with Security Reminder
+```
+Importante no comprometer a ningun push las keys guardadas en .env, si es necesario
+hacer ese control antes de cualquier push, quiero que adoptes el rol de product
+designer senior y completes la tarea 5, si detectas que vas a quedarte sin tokens
+antes de finalizar la tarea avisa y procedemos a guardar el contexto
+```
+
+### Prompt 8: Test Before Push
+```
+Antes de pushear hay que corroborar que funcione todo lo implementado, intente
+escanear el siguiente contract adress de ethereum
+0xdAC17F958D2ee523a2206206994597C13D831ec7 USDT (Tether) — Mainnet y me dice
+fetch failed en la pantalla de resultados, a que se debe ese error?
+```
+
+### Prompt 9: API Running Confirmation
+```
+[Terminal output showing VibeSafe API v1.0.0 running on localhost:4000]
+```
+
+### Prompt 10: API Key Updated
+```
+ya me hice una cuenta y pegue mi api key en .env, verifica que funcione
+```
+
+### Prompt 11: End Session
+```
+Terminamos por hoy, agrega y guarda todo el contexto faltante en el documento de
+docs karen-progress.md
+```
+
+---
+
+## Current Status
+
+### Completed Tasks
+- [x] Task 1: Create Next.js App
+- [x] Task 2: Scanner UI
+- [x] Task 3: Analysis Results
+- [x] Task 4: Wallet Connect
+- [x] Task 5: Styles and Polish
+
+### Verified Working
+- [x] Etherscan API integration (V2 with chainid)
+- [x] Claude AI analysis
+- [x] Frontend → API → Core flow
+- [x] USDT contract scan successful
+
+### Pending for Next Session
+- [ ] Run `pnpm turbo build` to verify full build
+- [ ] Commit Task 5 styling changes
+- [ ] Push to `feat/front-settings` branch
+- [ ] Test additional contracts on different networks
+- [ ] Create PR to main
+
+---
+
+## How to Start API Server
+
+**IMPORTANT:** The API must be started with environment variables loaded:
+
+```bash
+# From project root
+set -a && . ./.env && set +a && cd apps/api && pnpm ts-node src/index.ts
+
+# Or use this one-liner
+source .env && cd apps/api && pnpm ts-node src/index.ts
+```
+
+The simple `pnpm dev` may not load .env correctly depending on setup.
+
+---
+
+## Files Modified in Session 2
+
+| File | Changes |
+|------|---------|
+| `apps/web/src/app/globals.css` | Added SIGIL design system, animations, component styles |
+| `apps/web/src/app/scan/page.tsx` | Applied new animations and styling classes |
+| `.env` | Updated ETHERSCAN_API_KEY (not committed) |
+| `docs/karen-progress.md` | Added Session 2 documentation |
+
+---
+
+## Security Checklist
+
+Before any commit/push:
+- [x] `.env` is in `.gitignore`
+- [x] No API keys in source code
+- [x] No hardcoded secrets
+- [ ] Run `git diff` to verify no secrets in staged changes
