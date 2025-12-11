@@ -1,6 +1,3 @@
-export async function scanRepository(repo: string) {
-  return {
-    score: 100,
-    findings: []
-  };
-}
+// packages/core/src/index.ts
+export * from "./types";
+export { VibeSafeScanner, scan } from "./scanner";
