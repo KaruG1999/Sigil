@@ -11,7 +11,7 @@
 
     "baseUrl": ".",
     "paths": {
-      "@sigil/core": ["packages/core/dist/src"]
+      "@sigil/core": ["packages/core/dist"]
     },
 
     // Este SÍ es válido en TS 5.x

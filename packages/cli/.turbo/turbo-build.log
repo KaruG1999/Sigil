@@ -1,5 +1,5 @@
 
-> sigil-cli@1.0.0 build /home/anouk/Escritorio/Projects/Sigil/packages/cli
+> sigil-cli@1.0.0 build /home/karen/Escritorio/Sigil/packages/cli
 > tsup src/index.ts --format esm,cjs
 
 CLI Building entry: src/index.ts
@@ -9,6 +9,6 @@ CLI Target: es2020
 ESM Build start
 CJS Build start
 ESM dist/index.mjs 1.27 KB
-ESM ⚡️ Build success in 25ms
+ESM ⚡️ Build success in 148ms
 CJS dist/index.js 2.52 KB
-CJS ⚡️ Build success in 26ms
+CJS ⚡️ Build success in 149ms
