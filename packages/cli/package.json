@@ -6,8 +6,7 @@
     "sigil": "dist/index.js"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs",
-    "dev": "ts-node src/index.ts"
+    "build": "tsup src/index.ts --format esm,cjs"
   },
   "dependencies": {
     "@sigil/core": "workspace:*",
