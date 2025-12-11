@@ -50,7 +50,7 @@ program.command("scan").argument("<repo>", "path or url of the repository to sca
       console.log(" - [info] No findings detected");
     } else {
       for (const f of findings) {
-        console.log(` - [${f.type}] ${f.msg}`);
+        console.log(` - [${f.type}] ${f.message}`);
       }
     }
     console.log("");

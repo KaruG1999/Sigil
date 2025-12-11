@@ -9,22 +9,79 @@ const core_1 = require("@sigil/core");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// Initialize scanner with API keys from environment
+const scanner = new core_1.VibeSafeScanner({
+    etherscanApiKey: process.env.ETHERSCAN_API_KEY,
+    claudeApiKey: process.env.ANTHROPIC_API_KEY,
+});
+// Health check
+app.get("/health", (req, res) => {
+    res.json({
+        status: "ok",
+        service: "vibesafe-api",
+        version: "1.0.0",
+    });
+});
+// Get supported networks
+app.get("/networks", (req, res) => {
+    res.json({
+        networks: [
+            { id: "ethereum", name: "Ethereum Mainnet", chainId: 1 },
+            { id: "polygon", name: "Polygon", chainId: 137 },
+            { id: "bsc", name: "BNB Smart Chain", chainId: 56 },
+            { id: "arbitrum", name: "Arbitrum One", chainId: 42161 },
+            { id: "optimism", name: "Optimism", chainId: 10 },
+            { id: "base", name: "Base", chainId: 8453 },
+        ],
+    });
+});
+// Main scan endpoint
 app.post("/scan", async (req, res) => {
-    const { repo } = req.body || {};
-    if (!repo || typeof repo !== "string") {
-        return res.status(400).json({ status: "error", message: "Missing 'repo' in request body" });
-    }
     try {
-        const { score, findings } = await (0, core_1.scanRepository)(repo);
-        return res.json({ status: "success", score, findings });
+        const { type, input, network } = req.body;
+        // Validate required fields
+        if (!type || !input) {
+            return res.status(400).json({
+                error: "Missing required fields",
+                message: "Both 'type' and 'input' are required",
+                example: {
+                    type: "contract | code",
+                    input: "0x... or solidity code",
+                    network: "ethereum (optional)",
+                },
+            });
+        }
+        // Validate type
+        if (!["contract", "code"].includes(type)) {
+            return res.status(400).json({
+                error: "Invalid type",
+                message: "Type must be 'contract' or 'code'",
+            });
+        }
+        const scanInput = {
+            type,
+            input,
+            network: network || "ethereum",
+        };
+        console.log(`Scanning ${type}: ${type === "contract" ? input : "[code]"}`);
+        const result = await scanner.scan(scanInput);
+        console.log(`Scan complete. Risk: ${result.riskLevel} (${result.riskScore}/100)`);
+        return res.json(result);
     }
     catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        return res.status(500).json({ status: "error", message });
+        console.error("Scan error:", err);
+        return res.status(500).json({
+            error: "Internal server error",
+            message: err instanceof Error ? err.message : "Unknown error",
+        });
     }
 });
-const port = process.env.PORT ? Number(process.env.PORT) : 4000;
-app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`SIGIL API running on http://localhost:${port}`);
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+    console.log(`
+  ╔══════════════════════════════════════════╗
+  ║     VibeSafe API v1.0.0                  ║
+  ║     Running on http://localhost:${PORT}      ║
+  ╚══════════════════════════════════════════╝
+  `);
 });
