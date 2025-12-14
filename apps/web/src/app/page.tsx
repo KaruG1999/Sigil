@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
@@ -77,18 +75,6 @@ const IconCheck = () => (
 );
 
 export default function Home() {
-  const [repoUrl, setRepoUrl] = useState("");
-  const router = useRouter();
-
-  const handleScan = () => {
-    if (repoUrl.trim()) {
-      // Encode the URL and pass it to scan page
-      router.push(`/scan?repo=${encodeURIComponent(repoUrl.trim())}`);
-    } else {
-      router.push("/scan");
-    }
-  };
-
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#0A0A0F] text-[#E8E8F5]">
 
@@ -162,28 +148,17 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Scan Input in Hero */}
-          <div className="max-w-xl mx-auto w-full pt-4">
-            <div className="relative">
-              <input
-                type="text"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                placeholder="https://github.com/username/repository"
-                className="w-full h-14 pl-5 pr-36 bg-[#12121A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#A57CFF] focus:ring-1 focus:ring-[#A57CFF] transition-all font-mono text-sm"
-              />
-              <Button
-                onClick={handleScan}
-                className="absolute right-2 top-2 h-10 px-5 bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] hover:from-[#9361ff] hover:to-[#8b5cf6] text-white font-semibold rounded-lg transition-all"
-              >
-                Scan
+          {/* CTA Button */}
+          <div className="pt-6">
+            <Link href="/scan">
+              <Button className="h-14 px-10 bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] hover:from-[#9361ff] hover:to-[#8b5cf6] text-white text-lg font-semibold rounded-xl transition-all shadow-lg shadow-[#A57CFF]/20 hover:shadow-[#A57CFF]/40">
+                Start Scanning
                 <IconArrowRight />
               </Button>
-            </div>
+            </Link>
 
             <p className="text-center text-sm text-white/40 mt-4">
-              Free. No signup required.
+              3 free scans. No signup required.
             </p>
           </div>
 
@@ -352,28 +327,18 @@ export default function Home() {
       <section className="py-24 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to scan your first repo?
+            Ready to scan your first contract?
           </h2>
+          <p className="text-[#E8E8F5]/50 mb-8">
+            Analyze smart contracts by address or paste your Solidity code directly.
+          </p>
 
-          <div className="max-w-xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                placeholder="https://github.com/username/repository"
-                className="w-full h-14 pl-5 pr-36 bg-[#12121A] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:border-[#A57CFF] focus:ring-1 focus:ring-[#A57CFF] transition-all font-mono text-sm"
-              />
-              <Button
-                onClick={handleScan}
-                className="absolute right-2 top-2 h-10 px-5 bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] hover:from-[#9361ff] hover:to-[#8b5cf6] text-white font-semibold rounded-lg transition-all"
-              >
-                Scan
-                <IconArrowRight />
-              </Button>
-            </div>
-          </div>
+          <Link href="/scan">
+            <Button className="h-14 px-10 bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] hover:from-[#9361ff] hover:to-[#8b5cf6] text-white text-lg font-semibold rounded-xl transition-all shadow-lg shadow-[#A57CFF]/20 hover:shadow-[#A57CFF]/40">
+              Launch Scanner
+              <IconArrowRight />
+            </Button>
+          </Link>
         </div>
       </section>
 
