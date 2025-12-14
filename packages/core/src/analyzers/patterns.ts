@@ -1,5 +1,79 @@
 import type { Finding, VulnerabilityPattern, Severity } from "../types";
 
+// ============================================================================
+// SAFE PATTERNS - Used to suppress false positives
+// ============================================================================
+
+interface SafePattern {
+  id: string;
+  description: string;
+  pattern: RegExp;
+  suppressesVulnerabilities: string[]; // List of vulnerability IDs to suppress
+}
+
+const SAFE_PATTERNS: SafePattern[] = [
+  // Checked return value - suppresses unchecked call warning
+  {
+    id: "safe-001",
+    description: "Return value is captured and checked",
+    pattern: /\(\s*bool\s+\w+\s*,?\s*\)\s*=\s*\w+\.call\{/,
+    suppressesVulnerabilities: ["vuln-002"],
+  },
+  // ReentrancyGuard - suppresses reentrancy warning
+  {
+    id: "safe-002",
+    description: "Contract uses ReentrancyGuard",
+    pattern: /(?:nonReentrant|ReentrancyGuard|_notEntered|locked\s*=\s*true)/,
+    suppressesVulnerabilities: ["vuln-001"],
+  },
+  // User balance check before withdrawal - indicates per-user vault
+  {
+    id: "safe-003",
+    description: "Withdrawal protected by user balance check",
+    pattern: /(?:balances?\s*\[\s*msg\.sender\s*\]|_balances?\s*\[\s*msg\.sender\s*\])\s*(?:<|>=?|==)/,
+    suppressesVulnerabilities: ["danger-003"],
+  },
+  // Balance update before external call (CEI pattern)
+  {
+    id: "safe-004",
+    description: "Follows checks-effects-interactions pattern",
+    pattern: /balances?\s*\[\s*msg\.sender\s*\]\s*[-+]?=[\s\S]{0,100}\.call\{/,
+    suppressesVulnerabilities: ["vuln-001"],
+  },
+  // OpenZeppelin imports indicate professional patterns
+  {
+    id: "safe-005",
+    description: "Uses OpenZeppelin security contracts",
+    pattern: /import\s+["']@openzeppelin\/contracts/,
+    suppressesVulnerabilities: ["vuln-001", "vuln-002", "access-001"],
+  },
+  // Explicit success check after call
+  {
+    id: "safe-006",
+    description: "Call success is explicitly verified",
+    pattern: /\.call\{[^}]*\}\s*\([^)]*\)\s*;[\s\S]{0,30}(?:require\s*\(\s*success|if\s*\(\s*!?\s*success)/,
+    suppressesVulnerabilities: ["vuln-002"],
+  },
+  // Inline success check (standard pattern)
+  {
+    id: "safe-007",
+    description: "Inline success verification",
+    pattern: /\(\s*bool\s+success[\s\S]{0,50}if\s*\(\s*!success\s*\)/,
+    suppressesVulnerabilities: ["vuln-002"],
+  },
+  // Custom error on failure
+  {
+    id: "safe-008",
+    description: "Reverts on transfer failure",
+    pattern: /\.call\{[\s\S]{0,100}revert\s+\w*(?:Transfer|Call|Send)?\w*Failed/i,
+    suppressesVulnerabilities: ["vuln-002"],
+  },
+];
+
+// ============================================================================
+// MALICIOUS PATTERNS - Vulnerability detection
+// ============================================================================
+
 const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
   // ==================== RUG PULL PATTERNS ====================
   {
@@ -83,7 +157,8 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
     name: "Reentrancy Risk",
     description: "External call before state update (potential reentrancy)",
     severity: "critical",
-    pattern: /\.call\{[^}]*value[^}]*\}\s*\([^)]*\)[\s\S]{0,50}(?:balance|_balance|balanceOf)/,
+    // More specific: looks for .call{value} followed by state update (not before)
+    pattern: /\.call\{[^}]*value[^}]*\}\s*\([^)]*\)[\s\S]{0,100}(?:balances?\s*\[|_balances?\s*\[)[\s\S]{0,30}(?:=\s*0|=\s*balance|-=)/,
     recommendation: "Use checks-effects-interactions pattern or ReentrancyGuard",
   },
   {
@@ -91,7 +166,9 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
     name: "Unchecked Return Value",
     description: "External call return value not checked",
     severity: "high",
-    pattern: /\.call\{[^}]*\}\s*\([^)]*\)\s*;/,
+    // Only matches when there's NO variable assignment before .call
+    // Uses negative lookbehind simulation by checking for patterns that DON'T have assignment
+    pattern: /(?:^|[;\{\}])\s*(?:\w+\.)*\w+\.call\{[^}]*\}\s*\([^)]*\)\s*;/m,
     recommendation: "Always check return values: (bool success, ) = addr.call{...}(...)",
   },
   {
@@ -117,7 +194,7 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
     name: "Arbitrary External Call",
     description: "Function allows arbitrary external calls",
     severity: "critical",
-    pattern: /function\s+\w+\s*\([^)]*address[^)]*\)[^{]*\{[\s\S]*?\.call\{/,
+    pattern: /function\s+\w+\s*\([^)]*address[^)]*,\s*bytes[^)]*\)[^{]*\{[\s\S]*?\.call\{/,
     recommendation: "Arbitrary calls can drain contract funds",
   },
   {
@@ -125,8 +202,10 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
     name: "Unprotected ETH Withdrawal",
     description: "ETH withdrawal without proper access control",
     severity: "critical",
-    pattern: /function\s+(?:withdraw|drain|sweep)\w*\s*\([^)]*\)\s*(?:external|public)[^{]*\{[^}]*(?:transfer|send|call\{)/i,
-    recommendation: "Ensure withdrawal functions have proper access controls",
+    // More specific: only matches owner-controlled withdrawal to arbitrary address
+    // NOT per-user withdrawals with balance checks
+    pattern: /function\s+(?:withdraw|drain|sweep|emergencyWithdraw)\w*\s*\([^)]*\)\s*(?:external|public)[^{]*(?:onlyOwner|onlyRole)[^{]*\{[^}]*(?:transfer|send|call\{)[^}]*(?:owner|_owner|admin)/i,
+    recommendation: "Ensure withdrawal functions have proper access controls and limits",
   },
 
   // ==================== ACCESS CONTROL ====================
@@ -135,7 +214,8 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
     name: "Missing Access Control",
     description: "Sensitive function may lack access control",
     severity: "high",
-    pattern: /function\s+(?:set|update|change|modify)\w*\s*\([^)]*\)\s*(?:external|public)\s*\{/,
+    // More specific: setter functions that modify critical state without onlyOwner
+    pattern: /function\s+(?:set|update|change|modify)(?:Owner|Admin|Fee|Tax|Rate|Limit)\w*\s*\([^)]*\)\s*(?:external|public)\s*(?!\s*(?:onlyOwner|onlyRole|onlyAdmin))\s*\{/,
     recommendation: "Add onlyOwner or role-based access control",
   },
   {
@@ -166,11 +246,71 @@ const MALICIOUS_PATTERNS: VulnerabilityPattern[] = [
   },
 ];
 
+// ============================================================================
+// CONTEXT-AWARE ANALYSIS
+// ============================================================================
+
+interface CodeContext {
+  hasReentrancyGuard: boolean;
+  hasCheckedReturnValue: boolean;
+  hasUserBalanceCheck: boolean;
+  followsCEIPattern: boolean;
+  usesOpenZeppelin: boolean;
+  hasSuccessCheck: boolean;
+  hasCustomErrorOnFailure: boolean;
+}
+
+function analyzeCodeContext(sourceCode: string): CodeContext {
+  return {
+    hasReentrancyGuard: /(?:nonReentrant|ReentrancyGuard|locked\s*=\s*true)/.test(sourceCode),
+    hasCheckedReturnValue: /\(\s*bool\s+\w+\s*,?\s*\)\s*=\s*\w+\.call\{/.test(sourceCode),
+    hasUserBalanceCheck: /balances?\s*\[\s*msg\.sender\s*\]\s*(?:<|>=?|-)/.test(sourceCode),
+    followsCEIPattern: /balances?\s*\[\s*msg\.sender\s*\]\s*[-+]?=[\s\S]{0,50}\.call\{/.test(sourceCode),
+    usesOpenZeppelin: /import\s+["']@openzeppelin/.test(sourceCode),
+    hasSuccessCheck: /(?:\(\s*bool\s+success|if\s*\(\s*!?\s*success|require\s*\(\s*success)/.test(sourceCode),
+    hasCustomErrorOnFailure: /\.call\{[\s\S]{0,150}revert\s+\w*(?:Transfer|Call|Send)?\w*Failed/i.test(sourceCode),
+  };
+}
+
+function getSuppressedVulnerabilities(sourceCode: string): Set<string> {
+  const suppressed = new Set<string>();
+
+  for (const safePattern of SAFE_PATTERNS) {
+    if (safePattern.pattern.test(sourceCode)) {
+      for (const vulnId of safePattern.suppressesVulnerabilities) {
+        suppressed.add(vulnId);
+      }
+    }
+  }
+
+  return suppressed;
+}
+
+// ============================================================================
+// MAIN ANALYSIS FUNCTION
+// ============================================================================
+
 export function analyzePatterns(sourceCode: string): Finding[] {
   const findings: Finding[] = [];
   const detectedIds = new Set<string>();
 
+  // Analyze code context
+  const context = analyzeCodeContext(sourceCode);
+
+  // Get vulnerabilities that should be suppressed based on safe patterns
+  const suppressedVulns = getSuppressedVulnerabilities(sourceCode);
+
   for (const pattern of MALICIOUS_PATTERNS) {
+    // Skip if this vulnerability is suppressed by safe patterns
+    if (suppressedVulns.has(pattern.id)) {
+      continue;
+    }
+
+    // Additional context-aware filtering
+    if (shouldSuppressFinding(pattern.id, context)) {
+      continue;
+    }
+
     if (pattern.pattern.test(sourceCode) && !detectedIds.has(pattern.id)) {
       detectedIds.add(pattern.id);
       findings.push({
@@ -185,4 +325,27 @@ export function analyzePatterns(sourceCode: string): Finding[] {
   return findings;
 }
 
-export { MALICIOUS_PATTERNS };
+function shouldSuppressFinding(vulnId: string, context: CodeContext): boolean {
+  switch (vulnId) {
+    case "vuln-001": // Reentrancy
+      return context.hasReentrancyGuard || context.followsCEIPattern;
+
+    case "vuln-002": // Unchecked return value
+      return context.hasCheckedReturnValue || context.hasSuccessCheck || context.hasCustomErrorOnFailure;
+
+    case "danger-003": // Unprotected ETH withdrawal
+      return context.hasUserBalanceCheck;
+
+    case "access-001": // Missing access control
+      return context.usesOpenZeppelin;
+
+    default:
+      return false;
+  }
+}
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export { MALICIOUS_PATTERNS, SAFE_PATTERNS, analyzeCodeContext };
