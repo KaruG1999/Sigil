@@ -4,9 +4,14 @@ import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useAccount } from "wagmi";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
+import { WalletGate } from "../../components/WalletGate";
+import { PaywallModal } from "../../components/PaywallModal";
+import { useUsageTracker, FREE_SCANS } from "../../hooks/useUsageTracker";
+import { ConnectButton } from "../../components/ConnectButton";
 
 // Networks supported by the API
 const NETWORKS = [
@@ -75,6 +80,7 @@ type ScanResult = {
 function ScanPageContent() {
   const searchParams = useSearchParams();
   const initialAddress = searchParams.get("address") || "";
+  const { address } = useAccount();
 
   const [inputType, setInputType] = useState<InputType>("contract");
   const [input, setInput] = useState(initialAddress);
@@ -83,6 +89,17 @@ function ScanPageContent() {
   const [result, setResult] = useState<ScanResult>(null);
   const [error, setError] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Usage tracking
+  const {
+    scansRemaining,
+    scansUsed,
+    isPremium,
+    canScan,
+    recordScan,
+    upgradeToPremium,
+  } = useUsageTracker(address);
 
   const scanSteps = inputType === "contract"
     ? [
@@ -120,6 +137,12 @@ function ScanPageContent() {
   }, [scanState, scanSteps.length]);
 
   const handleScan = async () => {
+    // Check if user can scan
+    if (!canScan) {
+      setShowPaywall(true);
+      return;
+    }
+
     if (!input.trim()) {
       setError(inputType === "contract"
         ? "Please enter a valid contract address"
@@ -154,6 +177,9 @@ function ScanPageContent() {
       if (!res.ok || data.error) {
         throw new Error(data.error || data.message || `Server error: ${res.status}`);
       }
+
+      // Record the scan usage
+      recordScan();
 
       setResult(data);
       setScanState("success");
@@ -219,7 +245,34 @@ function ScanPageContent() {
             <span className="font-bold tracking-wider text-sm text-[#A57CFF]">SIGIL</span>
           </Link>
 
-          <div className="w-24" />
+          <div className="flex items-center gap-3">
+            {/* Scans remaining badge */}
+            <button
+              onClick={() => !isPremium && setShowPaywall(true)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                isPremium
+                  ? "bg-gradient-to-r from-[#A57CFF]/20 to-[#4FFFEF]/20 text-[#4FFFEF] border border-[#4FFFEF]/20"
+                  : scansRemaining > 0
+                  ? "bg-white/5 text-white/60 hover:bg-white/10 border border-white/10"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
+              }`}
+            >
+              {isPremium ? (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                  </svg>
+                  Premium
+                </>
+              ) : (
+                <>
+                  <span className="tabular-nums">{scansRemaining}/{FREE_SCANS}</span>
+                  <span className="text-white/40">scans</span>
+                </>
+              )}
+            </button>
+            <ConnectButton />
+          </div>
         </div>
       </header>
 
@@ -582,6 +635,14 @@ function ScanPageContent() {
           </div>
         )}
       </main>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        onUpgrade={upgradeToPremium}
+        scansUsed={scansUsed}
+      />
     </div>
   );
 }
@@ -593,7 +654,9 @@ export default function ScanPage() {
         <div className="w-8 h-8 border-2 border-[#A57CFF] border-t-transparent rounded-full animate-spin" />
       </div>
     }>
-      <ScanPageContent />
+      <WalletGate>
+        <ScanPageContent />
+      </WalletGate>
     </Suspense>
   );
 }
