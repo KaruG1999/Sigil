@@ -3,12 +3,12 @@
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { mainnet, polygon, bsc, arbitrum } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { metaMask } from "wagmi/connectors";
+import { injected } from "wagmi/connectors";
 import { useState, type ReactNode } from "react";
 
 const config = createConfig({
   chains: [mainnet, polygon, bsc, arbitrum],
-  connectors: [metaMask()],
+  connectors: [injected()],
   transports: {
     [mainnet.id]: http(),
     [polygon.id]: http(),
