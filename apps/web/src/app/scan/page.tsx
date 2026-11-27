@@ -110,15 +110,6 @@ function ScanPageContent() {
         { id: "report", label: "Generating report" },
       ];
 
-  // Auto-start scan if address is provided in URL
-  useEffect(() => {
-    if (initialAddress && scanState === "idle") {
-      handleScan();
-    }
-    // Run once on mount: auto-start only for the address that came in the URL
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Progress through steps during loading
   useEffect(() => {
     if (scanState === "loading") {
@@ -185,6 +176,17 @@ function ScanPageContent() {
       setScanState("error");
     }
   };
+
+  // Auto-start scan if address is provided in URL
+  useEffect(() => {
+    if (initialAddress && scanState === "idle") {
+      // Intentional one-time side effect: start the scan for a ?address= link
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleScan();
+    }
+    // Run once on mount: auto-start only for the address that came in the URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleReset = () => {
     setInput("");
