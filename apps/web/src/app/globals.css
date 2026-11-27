@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
-   SIGIL Design System - VibeSafe Theme
+   SIGIL Design System
    ============================================ */
 
 @theme inline {
@@ -128,8 +128,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+    /* Keep anchor targets clear of the fixed header */
+    scroll-padding-top: 5rem;
+    color-scheme: dark;
+  }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
   }
 }
 
@@ -141,7 +151,7 @@
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -231,6 +241,130 @@
   animation: float 3s ease-in-out infinite;
 }
 
+/* Hero entrance: staged once on first load */
+.hero-enter {
+  animation: fade-in-up 0.5s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+/* ============================================
+   Landing motion (driven by components/LandingMotion.tsx)
+   ============================================ */
+
+/* Hide animated elements until GSAP takes over, so the server-rendered
+   page doesn't flash its final state first. The `js` class is set by an
+   inline script in layout.tsx; without JS everything stays visible.
+   The fallback animation reveals them anyway if the script never runs. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-hero-bg],
+  .js [data-hero-item],
+  .js [data-reveal] {
+    visibility: hidden;
+    animation: motion-fallback 0s 3s forwards;
+  }
+  .js [data-hero-line] {
+    transform: translateY(110%);
+    animation: motion-fallback 0s 3s forwards;
+  }
+}
+@keyframes motion-fallback {
+  to {
+    visibility: visible;
+    transform: none;
+  }
+}
+
+/* Slow sheen across the gradient headline line */
+.text-shimmer {
+  background-size: 200% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .text-shimmer {
+    animation: text-shimmer 8s ease-in-out infinite alternate;
+  }
+  /* The headline line also carries the pre-hide fallback; keep both */
+  .js [data-hero-line].text-shimmer {
+    animation:
+      motion-fallback 0s 3s forwards,
+      text-shimmer 8s ease-in-out infinite alternate;
+  }
+}
+@keyframes text-shimmer {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+/* Scroll cue: a dot travelling down its track */
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-cue {
+    animation: scroll-cue 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+}
+@keyframes scroll-cue {
+  0% { opacity: 0; translate: 0 0; }
+  30% { opacity: 1; }
+  80% { opacity: 0; translate: 0 14px; }
+  100% { opacity: 0; translate: 0 14px; }
+}
+
+/* Nav links: underline that grows from the left */
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1px;
+  background: linear-gradient(90deg, #A57CFF, #4FFFEF);
+  scale: 0 1;
+  transform-origin: right;
+  transition: scale 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+@media (hover: hover) {
+  .nav-link:hover::after {
+    scale: 1 1;
+    transform-origin: left;
+  }
+}
+
+/* Cards: a border + inner glow that follow the pointer.
+   --mx/--my are set by LandingMotion; --spot is an "r g b" triplet. */
+.spotlight-card {
+  --spot: 165 124 255;
+  position: relative;
+  isolation: isolate;
+}
+.spotlight-card::before,
+.spotlight-card::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+.spotlight-card::before {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--spot) / 0.8), transparent 65%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.spotlight-card::after {
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--spot) / 0.08), transparent 60%);
+}
+@media (hover: hover) {
+  .spotlight-card:hover::before,
+  .spotlight-card:hover::after {
+    opacity: 1;
+  }
+}
+
 /* Staggered animations for lists */
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
@@ -266,7 +400,9 @@
 .btn-glow {
   position: relative;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition-property: box-shadow, translate;
+  transition-duration: 0.3s;
+  transition-timing-function: ease-out;
 }
 
 .btn-glow::before {
@@ -291,7 +427,7 @@
 
 .btn-glow:hover {
   box-shadow: 0 0 30px rgba(165, 124, 255, 0.4);
-  transform: translateY(-2px);
+  translate: 0 -2px;
 }
 
 /* Input focus glow */
@@ -349,4 +485,19 @@
 :focus-visible {
   outline: 2px solid #A57CFF;
   outline-offset: 2px;
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
 }
