@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { FREE_SCANS } from "../hooks/useUsageTracker";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { FREE_SCANS } from "@/hooks/useUsageTracker";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -15,8 +16,6 @@ interface PaywallModalProps {
 export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<"plans" | "processing" | "success">("plans");
-
-  if (!isOpen) return null;
 
   const handleUpgrade = async () => {
     setIsProcessing(true);
@@ -37,27 +36,31 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={step === "plans" ? onClose : undefined}
-      />
-
-      {/* Modal */}
-      <div className="relative w-full max-w-lg animate-fade-in-up">
-        <Card className="glass-card p-0 overflow-hidden">
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        // Only allow closing while the user is still choosing a plan
+        if (!open && step === "plans") onClose();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overscroll-contain outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98] data-[state=open]:duration-300 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.99] data-[state=closed]:duration-150"
+          onEscapeKeyDown={(e) => step !== "plans" && e.preventDefault()}
+        >
+        <Card className="glass-card gap-0 p-0 overflow-hidden">
           {/* Header */}
           <div className="relative p-6 pb-0">
             {step === "plans" && (
-              <button
-                onClick={onClose}
+              <Dialog.Close
+                aria-label="Close"
                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </Dialog.Close>
             )}
 
             <div className="text-center">
@@ -68,10 +71,10 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                     </svg>
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Upgrade to Premium</h2>
-                  <p className="text-white/50 text-sm">
+                  <Dialog.Title className="text-2xl font-bold text-white mb-2">Upgrade to Premium</Dialog.Title>
+                  <Dialog.Description className="text-white/60 text-sm">
                     You&apos;ve used all {FREE_SCANS} free scans. Upgrade for unlimited access.
-                  </p>
+                  </Dialog.Description>
                 </>
               )}
 
@@ -81,8 +84,8 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
                     <div className="absolute inset-0 border-2 border-[#A57CFF]/20 rounded-full" />
                     <div className="absolute inset-0 border-2 border-transparent border-t-[#A57CFF] rounded-full animate-spin" />
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Processing Payment</h2>
-                  <p className="text-white/50 text-sm">
+                  <Dialog.Title className="text-2xl font-bold text-white mb-2">Processing Payment</Dialog.Title>
+                  <p className="text-white/60 text-sm">
                     Please wait while we confirm your transaction...
                   </p>
                 </>
@@ -95,8 +98,8 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Welcome to Premium!</h2>
-                  <p className="text-white/50 text-sm">
+                  <Dialog.Title className="text-2xl font-bold text-white mb-2">Welcome to Premium!</Dialog.Title>
+                  <p className="text-white/60 text-sm">
                     You now have unlimited access to Sigil&apos;s security scanner.
                   </p>
                 </>
@@ -121,11 +124,11 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-bold text-white">Premium Plan</h3>
-                      <p className="text-white/50 text-sm">Unlimited scans forever</p>
+                      <p className="text-white/60 text-sm">Unlimited scans forever</p>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-white">0.01 BNB</div>
-                      <div className="text-xs text-white/40">one-time payment</div>
+                      <div className="text-xs text-white/60">one-time payment</div>
                     </div>
                   </div>
 
@@ -169,15 +172,15 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
                 </div>
 
                 {/* Demo Notice */}
-                <p className="text-center text-xs text-white/30">
+                <p className="text-center text-xs text-white/50">
                   Demo mode: No actual payment will be processed
                 </p>
               </div>
             )}
 
             {step === "processing" && (
-              <div className="py-8">
-                <div className="flex items-center justify-center gap-2 text-sm text-white/50">
+              <div className="py-8" role="status" aria-label="Processing payment">
+                <div className="flex items-center justify-center gap-2 text-sm text-white/60">
                   <div className="w-2 h-2 bg-[#A57CFF] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                   <div className="w-2 h-2 bg-[#A57CFF] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                   <div className="w-2 h-2 bg-[#A57CFF] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -196,7 +199,8 @@ export function PaywallModal({ isOpen, onClose, onUpgrade, scansUsed }: PaywallM
             )}
           </div>
         </Card>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

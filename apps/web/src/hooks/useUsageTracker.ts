@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 const STORAGE_KEY = "sigil_usage";
 const FREE_SCANS = 3;
@@ -24,21 +24,18 @@ interface UseUsageTrackerReturn {
 }
 
 export function useUsageTracker(walletAddress: string | undefined): UseUsageTrackerReturn {
-  const [usageData, setUsageData] = useState<UsageData>({});
-
-  // Load usage data from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setUsageData(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error("Failed to load usage data:", e);
-      }
+  // Read persisted usage once, on first client render.
+  // This hook only runs behind the wallet gate, which never renders on the server.
+  const [usageData, setUsageData] = useState<UsageData>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? (JSON.parse(stored) as UsageData) : {};
+    } catch (e) {
+      console.error("Failed to load usage data:", e);
+      return {};
     }
-  }, []);
+  });
 
   // Save usage data to localStorage
   const saveUsageData = useCallback((data: UsageData) => {

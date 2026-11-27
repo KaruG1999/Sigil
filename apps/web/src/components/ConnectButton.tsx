@@ -1,43 +1,84 @@
 "use client";
 
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { cn } from "@/lib/utils";
 
-export function ConnectButton() {
+interface ConnectButtonProps {
+  /** "primary" for the main call to action, "secondary" when another CTA sits next to it */
+  variant?: "primary" | "secondary";
+  className?: string;
+}
+
+const base =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-[background-color,border-color,color,scale] duration-150 ease-out enabled:active:scale-[0.96] disabled:opacity-60";
+
+export function ConnectButton({ variant = "primary", className }: ConnectButtonProps) {
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect, connectors, isPending, error } = useConnect();
   const { disconnect } = useDisconnect();
 
   if (isConnected && address) {
     return (
       <button
+        type="button"
         onClick={() => disconnect()}
-        className="flex items-center gap-2 bg-[#12121A] hover:bg-[#1a1a24] border border-white/10 text-white px-4 py-2 rounded-lg transition-all group"
+        title="Disconnect wallet"
+        className={cn(
+          base,
+          "group border border-white/10 bg-[#12121A] text-white hover:border-white/20 hover:bg-[#1a1a24]",
+          className
+        )}
       >
-        <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-        <span className="font-mono text-sm">
-          {address.slice(0, 6)}...{address.slice(-4)}
+        <span aria-hidden="true" className="h-2 w-2 rounded-full bg-green-400" />
+        <span className="font-mono tabular-nums">
+          {address.slice(0, 6)}…{address.slice(-4)}
         </span>
-        <span className="text-white/40 group-hover:text-white/60 text-xs ml-1">
-          (disconnect)
-        </span>
+        <span className="sr-only">Disconnect wallet</span>
       </button>
     );
   }
 
+  const noWallet = !!error && /provider not found/i.test(error.message);
+
   return (
-    <button
-      onClick={() => connect({ connector: connectors[0] })}
-      className="flex items-center gap-2 bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] hover:from-[#9361ff] hover:to-[#8b5cf6] text-white px-4 py-2 rounded-lg font-medium transition-all"
-    >
-      <WalletIcon />
-      <span>Connect Wallet</span>
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => connect({ connector: connectors[0] })}
+        disabled={isPending}
+        className={cn(
+          base,
+          variant === "primary"
+            ? "bg-gradient-to-r from-[#A57CFF] to-[#7c3aed] text-white hover:from-[#9361ff] hover:to-[#8b5cf6]"
+            : "border border-white/10 bg-white/5 text-white hover:border-white/20 hover:bg-white/10",
+          className
+        )}
+      >
+        <WalletIcon />
+        <span>{isPending ? "Connecting…" : "Connect Wallet"}</span>
+      </button>
+
+      {noWallet && (
+        <p role="alert" className="absolute right-0 top-full mt-2 w-60 rounded-lg border border-white/10 bg-[#12121A] p-3 text-left text-xs text-white/70 shadow-xl">
+          No browser wallet detected.{" "}
+          <a
+            href="https://metamask.io/download/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#A57CFF] underline underline-offset-2 hover:text-white"
+          >
+            Install MetaMask
+          </a>{" "}
+          or another Web3 wallet to continue.
+        </p>
+      )}
+    </div>
   );
 }
 
 function WalletIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
